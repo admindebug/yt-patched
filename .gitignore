@@ -1,0 +1,12 @@
+# Build artifacts
+work/
+out/
+keystore/
+*.apk
+*.zip
+*.log
+
+# Misc
+.DS_Store
+__pycache__/
+*.pyc

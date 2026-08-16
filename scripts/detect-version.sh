@@ -8,7 +8,7 @@ require java
 CLI_FILE="$(cat "$WORK_DIR/.cli")"
 PATCHES_FILE="$(cat "$WORK_DIR/.patches")"
 
-log "Detecting latest supported YouTube version..."
+log "Detecting latest supported YouTube version..." >&2
 java -jar "$CLI_FILE" list-patches -p -v --patches="$PATCHES_FILE" > "$WORK_DIR/patch-list.txt" 2>/dev/null
 
 LIST_FILE="$WORK_DIR/patch-list.txt" python3 - <<'EOF'

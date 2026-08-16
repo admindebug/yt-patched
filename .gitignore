@@ -6,6 +6,9 @@ keystore/
 *.zip
 *.log
 
+# Secrets - never commit
+config/.env.local
+
 # Misc
 .DS_Store
 __pycache__/

@@ -7,6 +7,15 @@ OUT_DIR="${OUT_DIR:-$PROJECT_DIR/out}"
 MODULE_DIR="${MODULE_DIR:-$PROJECT_DIR/module}"
 CONFIG_FILE="${CONFIG_FILE:-$PROJECT_DIR/config/patches.json}"
 
+# Load local-only secrets (TELEGRAM_BOT_TOKEN / TELEGRAM_CHANNEL_ID), if present.
+# This file is gitignored and never committed.
+if [ -f "$PROJECT_DIR/config/.env.local" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$PROJECT_DIR/config/.env.local"
+    set +a
+fi
+
 log()  { printf '\033[1;34m[%s]\033[0m %s\n' "$(date +%H:%M:%S)" "$*"; }
 fail() { printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 

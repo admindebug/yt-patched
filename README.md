@@ -62,15 +62,31 @@ Semua patch dikonfigurasi di **`config/patches.json`**:
 - Ubah daftar `patches` sesuai keinginan (daftar nama valid bisa dicek via `scripts/detect-version.sh` / `list-patches`).
 - `youtube_version` dapat di-override manual saat memicu workflow, atau dibiarkan kosong untuk auto-detect versi terbaru yang didukung.
 
-### Menjalankan Build di Lokal (opsional)
+### Menjalankan Build di Lokal (Termux / PC)
+
+```bash
+# Siapkan kredensial Telegram (JANGAN di-commit):
+cp config/.env.local.example config/.env.local
+# lalu isi TELEGRAM_BOT_TOKEN dan TELEGRAM_CHANNEL_ID
+
+# Build penuh + kirim ke Telegram (auto-split bila file > 50 MB):
+./scripts/build-local.sh                # pakai versi dari config/patches.json
+./scripts/build-local.sh 20.51.39       # atau override versi
+```
+
+Atau step-by-step:
 
 ```bash
 ./scripts/fetch-sources.sh
 ./scripts/download-apk.sh
-./scripts/patch-apk.sh
-./scripts/build-module.sh
-# hasil: out/YouTube.RVX.v<versi>.zip
+./scripts/patch-apk.sh                  # langkah terberat (±30-50 menit)
+./scripts/build-module.sh               # hasil: out/YouTube.RVX.v<versi>.zip
+./scripts/telegram.sh                   # kirim ke channel (split otomatis)
 ```
+
+> [!NOTE]
+> - Build butuh **Java 21 + ±3 GB RAM + ±40 menit CPU**. Di HP: tutup aplikasi lain, cas device, jaga Termux tetap di foreground (matikan battery optimization untuk Termux).
+> - Module zip ±290 MB **melebihi batas 50 MB bot Telegram**, jadi file di-split jadi beberapa part saat dikirim via bot. File utuh juga tersedia di `/sdcard/Download/YouTube-RVX/`.
 
 
 

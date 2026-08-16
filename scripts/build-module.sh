@@ -12,7 +12,7 @@ MODULE_ZIP="$OUT_DIR/$MODULE_NAME"
 [ -f "$STOCK_APK" ]   || fail "Stock APK missing: $STOCK_APK"
 [ -f "$PATCHED_APK" ] || fail "Patched APK missing: $PATCHED_APK"
 
-REPO="${GITHUB_REPOSITORY:-local/local}"
+REPO="${GITHUB_REPOSITORY:-admindebug/yt-patched}"
 BUILD_CODE="${BUILD_CODE:-$(date +%Y%m%d%H%M)}"
 
 mkdir -p "$OUT_DIR"

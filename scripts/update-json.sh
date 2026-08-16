@@ -5,7 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 # Regenerates changelog.md and update.json at the repo root so that
 # Magisk can fetch updates via the raw GitHub URLs in update.json.
 VERSION="$(read_json "['youtube_version']")"
-REPO="${GITHUB_REPOSITORY:-local/local}"
+REPO="${GITHUB_REPOSITORY:-admindebug/yt-patched}"
 TAG="v$VERSION"
 DATE="$(date +%Y-%m-%d)"
 

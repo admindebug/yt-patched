@@ -100,6 +100,7 @@ jobs:
           git add update.json changelog.md config/patches.json .last-fingerprint
           git diff --cached --quiet || {
             git commit -m "chore: update build metadata $(date +%F)"
+            git pull --rebase --autostash origin "$GITHUB_REF_NAME" || git pull --rebase origin "$GITHUB_REF_NAME"
             git push
           }
 

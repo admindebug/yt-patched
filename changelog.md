@@ -1,4 +1,14 @@
-## v20.51.39-R4 (2026-08-03)
+## v20.51.39 (2026-08-16)
+
+### Update
+- Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
+- YouTube 20.51.39 - all configured patches applied
+
+### Fix & Problem
+- If buffering occurs: Settings > ReVanced > Misc > Spoof client - switch client
+- For Non-Root, if "Package incompatible" appears, uninstall the old version first
+
+`Note: Always Read README.MD first!`
 
 ### Update
 - Patched with Revancify Xisr Tool v1.4.5

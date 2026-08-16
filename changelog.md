@@ -11,6 +11,16 @@
 `Note: Always Read README.MD first!`
 
 ### Update
+- Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
+- YouTube 20.51.39 - all configured patches applied
+
+### Fix & Problem
+- If buffering occurs: Settings > ReVanced > Misc > Spoof client - switch client
+- For Non-Root, if "Package incompatible" appears, uninstall the old version first
+
+`Note: Always Read README.MD first!`
+
+### Update
 - Patched with Revancify Xisr Tool v1.4.5
 - Based on [Anddea Patch v4.2.0-dev.11](https://github.com/anddea/revanced-patches/releases/tag/v4.2.0-dev.11) (thanks to Anddea)
 - All patch included!

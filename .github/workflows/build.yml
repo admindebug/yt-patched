@@ -41,6 +41,8 @@ jobs:
           echo "GITHUB_REPOSITORY=${{ github.repository }}" >> "$GITHUB_ENV"
 
       - name: Fetch sources (Morphe CLI + Anddea patches)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash scripts/fetch-sources.sh
 
       - name: Resolve YouTube version

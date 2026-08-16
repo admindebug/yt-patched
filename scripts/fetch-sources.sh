@@ -6,15 +6,25 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 MORPHE_REPO="${MORPHE_REPO:-MorpheApp/morphe-cli}"
 ANDDEA_REPO="${ANDDEA_REPO:-anddea/revanced-patches}"
 
+# GitHub API calls need a token to avoid rate-limiting (esp. on shared runner IPs).
+GH_API_AUTH=()
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    GH_API_AUTH=(-H "Authorization: Bearer $GITHUB_TOKEN")
+fi
+
+api_get() {
+    curl -fsSL "${GH_API_AUTH[@]}" "https://api.github.com/repos/$1/releases/latest"
+}
+
 # Resolve Morphe CLI latest release (morphe-cli redirects to morphe-desktop assets)
-CLI_URL=$(curl -fsSL "https://api.github.com/repos/$MORPHE_REPO/releases/latest" \
+CLI_URL=$(api_get "$MORPHE_REPO" \
     | grep -oE '"browser_download_url": "[^"]*all\.jar"' | head -1 | sed -E 's/.*"([^"]*)"/\1/')
 [ -n "$CLI_URL" ] || fail "Cannot resolve Morphe CLI release URL."
 CLI_FILE="$(basename "$CLI_URL")"
 log "Morphe CLI: $CLI_FILE"
 
 # Resolve Anddea patches latest .mpp
-PATCHES_URL=$(curl -fsSL "https://api.github.com/repos/$ANDDEA_REPO/releases/latest" \
+PATCHES_URL=$(api_get "$ANDDEA_REPO" \
     | grep -oE '"browser_download_url": "[^"]*\.mpp"' | head -1 | sed -E 's/.*"([^"]*)"/\1/')
 [ -n "$PATCHES_URL" ] || fail "Cannot resolve Anddea patches release URL."
 PATCHES_FILE="$(basename "$PATCHES_URL")"

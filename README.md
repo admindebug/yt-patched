@@ -1,51 +1,43 @@
-<h1 align="center">📺 YouTube ReVanced Patch</h1>
+# YouTube ReVanced Patch
 
-<p align="center">
-  <b>A patched version of YouTube with ad-free experience and premium features using <a href="https://github.com/decipher3114/Revancify">Revancify Tools</a></b>  
-</p>
+YouTube patched tanpa iklan + fitur premium, dibangun pakai [Revancify Tools](https://github.com/decipher3114/Revancify).
 
-> ⚡ **Auto-build pipeline** — setiap build di-generate otomatis oleh GitHub Actions dan dikirim ke channel Telegram. Lihat [Cara Pakai Pipeline](#-auto-build-pipeline) di bawah.
+Build-nya otomatis lewat GitHub Actions tiap hari, hasilnya dikirim ke channel Telegram. Detail alurnya ada di bawah.
 
-‎
+## Cara Kerja Pipeline
 
-## 🛠️ Auto-Build Pipeline
-
-Project ini memiliki pipeline **CI/CD otomatis** yang melakukan patch, build module Magisk, rilis ke GitHub, lalu mengirim hasilnya ke channel Telegram.
-
-### Alur Pipeline
+Build dijalankan oleh GitHub Actions (jadwal harian atau manual), alurnya kira-kira begini:
 
 ```
-GitHub Actions (schedule harian / manual)
-  │
-  ├─ fetch-sources.sh   → download Morphe CLI + patches Anddea (.mpp) terbaru
-  ├─ detect-version.sh  → cari versi YouTube terbaru yang didukung patch
-  ├─ download-apk.sh    → download APK stock dari APKMirror (scraper)
-  ├─ patch-apk.sh       → patch APK (Morphe CLI, pilih patch dari config)
-  ├─ build-module.sh    → rakit zip module Magisk (module.prop, customize.sh, dll)
-  ├─ update-json.sh     → update update.json + changelog.md
-  ├─ GitHub Release     → publish zip ke releases/<repo>
-  └─ telegram.sh        → kirim link release + ringkasan ke channel Telegram
+fetch-sources.sh  → ambil Morphe CLI + patches Anddea (.mpp) terbaru
+detect-version.sh → cari versi YouTube terbaru yang didukung patch
+download-apk.sh   → download APK stock dari APKMirror
+patch-apk.sh      → patch APK sesuai config/patches.json
+build-module.sh   → rakit jadi zip module Magisk
+update-json.sh    → update update.json + changelog.md
+GitHub Release    → publish zip ke halaman release
+telegram.sh       → kirim link + ringkasan ke channel
 ```
 
 > [!NOTE]
-> File module zip (±300 MB) **melebihi batas upload bot Telegram (50 MB)**, jadi Telegram menerima **link release + ringkasan patch** — file di-download dari GitHub Releases. (Jika module < 50 MB, file dikirim langsung.)
+> Ukuran module zip ±300 MB, sedangkan batas upload bot Telegram cuma 50 MB. Jadi yang dikirim ke Telegram adalah **link release** + ringkasan patch. Kalau ukuran module di bawah 50 MB (jarang terjadi), filenya dikirim langsung.
 
-### Setup Sekali (di GitHub)
+## Setup Pertama Kali
 
-1. **Buat repository GitHub** dari project ini lalu push.
-2. **Tambahkan Secrets** di `Settings → Secrets and variables → Actions`:
+1. Push project ini ke repo GitHub kamu.
+2. Tambah secrets di `Settings → Secrets and variables → Actions`:
    | Secret | Isi |
    |--------|-----|
-   | `TELEGRAM_BOT_TOKEN` | Token bot Telegram (dari @BotFather) |
-   | `TELEGRAM_CHANNEL_ID` | ID channel tujuan (format `-100xxxxxxxxxx`) |
-3. Jalankan workflow `Build & Release Module` dari tab **Actions** (atau tunggu schedule harian).
+   | `TELEGRAM_BOT_TOKEN` | Token bot dari @BotFather |
+   | `TELEGRAM_CHANNEL_ID` | ID channel, format `-100xxxxxxxxxx` |
+3. Jalankan workflow `Build & Release Module` dari tab **Actions**, atau tunggu jadwal hariannya.
 
 > [!CAUTION]
-> **JANGAN pernah menaruh BOT_TOKEN di file/kode.** Token hanya boleh ada di GitHub Secrets. Jika token pernah bocor, segera buat ulang via @BotFather (revoke) — bot tidak menyimpan token, hanya membaca dari env saat build berjalan.
+> **Jangan pernah simpan BOT_TOKEN di file atau kode.** Token cuma boleh ada di GitHub Secrets. Kalau token sudah terlanjur bocor, langsung buat ulang via @BotFather.
 
-### Kustomisasi Patch
+## Atur Patch
 
-Semua patch dikonfigurasi di **`config/patches.json`**:
+Patch diatur lewat `config/patches.json`:
 
 ```json
 {
@@ -59,102 +51,81 @@ Semua patch dikonfigurasi di **`config/patches.json`**:
 }
 ```
 
-- Ubah daftar `patches` sesuai keinginan (daftar nama valid bisa dicek via `scripts/detect-version.sh` / `list-patches`).
-- `youtube_version` dapat di-override manual saat memicu workflow, atau dibiarkan kosong untuk auto-detect versi terbaru yang didukung.
+- Daftar patch tinggal ditambah/dikurangi sesuai selera. Nama patch yang valid bisa dicek via `scripts/detect-version.sh`.
+- `youtube_version` bisa diisi manual saat trigger workflow, atau dikosongkan biar auto-detect versi terbaru.
 
-### Menjalankan Build di Lokal (Termux / PC)
+## Build di Lokal (Termux / PC)
 
 ```bash
-# Siapkan kredensial Telegram (JANGAN di-commit):
+# Siapkan kredensial Telegram dulu (JANGAN di-commit):
 cp config/.env.local.example config/.env.local
-# lalu isi TELEGRAM_BOT_TOKEN dan TELEGRAM_CHANNEL_ID
+# isi TELEGRAM_BOT_TOKEN dan TELEGRAM_CHANNEL_ID
 
-# Build penuh + kirim ke Telegram (auto-split bila file > 50 MB):
-./scripts/build-local.sh                # pakai versi dari config/patches.json
-./scripts/build-local.sh 20.51.39       # atau override versi
+# Build langsung + kirim ke Telegram (auto-split kalau > 50 MB):
+./scripts/build-local.sh                # pakai versi di config/patches.json
+./scripts/build-local.sh 20.51.39       # atau paksa versi tertentu
 ```
 
-Atau step-by-step:
+Kalau mau jalan pelan-pelan:
 
 ```bash
 ./scripts/fetch-sources.sh
 ./scripts/download-apk.sh
-./scripts/patch-apk.sh                  # langkah terberat (±30-50 menit)
+./scripts/patch-apk.sh                  # ini yang paling lama, ±30-50 menit
 ./scripts/build-module.sh               # hasil: out/YouTube.RVX.v<versi>.zip
-./scripts/telegram.sh                   # kirim ke channel (split otomatis)
+./scripts/telegram.sh
 ```
 
 > [!NOTE]
-> - Build butuh **Java 21 + ±3 GB RAM + ±40 menit CPU**. Di HP: tutup aplikasi lain, cas device, jaga Termux tetap di foreground (matikan battery optimization untuk Termux).
-> - Module zip ±290 MB **melebihi batas 50 MB bot Telegram**, jadi file di-split jadi beberapa part saat dikirim via bot. File utuh juga tersedia di `/sdcard/Download/YouTube-RVX/`.
+> - Butuh **Java 21 + ±3 GB RAM + ±40 menit**. Kalau build di HP: tutup aplikasi lain, colok charger, dan matikan battery optimization untuk Termux.
+> - Module zip ±290 MB di-split jadi beberapa part saat dikirim via bot. File utuh juga ada di `/sdcard/Download/YouTube-RVX/`.
 
+## Disclaimer
 
+Saya buat ini untuk pemakaian pribadi. Pakai sendiri, tanggung risiko sendiri ya.
 
-‎
+## About
 
-## ⚠️ Disclaimer  
-> **I only patch for personal use. Please use at your own risk!**  
-‎
-## 📌 About  
-This project provides a **YouTube ReVanced** patch that enables an ad-free experience and premium features **without a subscription**.  
-Supports both **ROOT** and **NON-ROOT** versions! 🚀  
-‎
-## 🔧 Requirements  
+Project ini menghasilkan **YouTube ReVanced** yang bebas iklan dan dapat fitur premium tanpa berlangganan. Mendukung **ROOT** dan **NON-ROOT**.
 
-<h4>🎭 Root Users 🎭</h4>
+## Requirements
 
-✅ **Required:**  
-> - **KSU / Magisk / Apatch**  
-> - ❌ Do not flash module on **TWRP** or other Custom Recovery!  
+**Root:**
+- KSU / Magisk / Apatch
+- Jangan flash module lewat TWRP atau Custom Recovery lain!
+- Versi minimum: Magisk `24200`, KSU `11425`
 
-🛠️ **Minimum Supported Versions:**  
-> - **Magisk**: `24200`  
-> - **KSU**: `11425`
----
-<h4>🌈 Non-Root Users 🌈</h4>
+**Non-Root:**
+- GmsCore (MicroG) untuk login akun Google
+- YouTube ReVanced versi non-root
 
-✅ **Required:**  
-> - **GmsCore (MicroG)** → Required for logging into a Google Account  
-> - **YouTube ReVanced (Non-Root Version)**  
+## Download GmsCore / MicroG
 
-‎
+| Source | Download |
+|--------|---------|
+| [MicroG-RE (Morphe)](https://github.com/MorpheApp/MicroG-RE/releases/latest) | Recommended |
+| [MicroG-RE (Better UI)](https://github.com/wstxda/microg-re/releases/latest) | Opsional |
+| [GmsCore dari ReVanced](https://github.com/revanced/gmscore/releases/latest) | Alternatif |
+| [GmsCore dari YT-Advanced](https://github.com/yt-advanced/gmscore/releases/latest) | Alternatif |
 
-## 📥 Download GmsCore/MicroG  
+## Cara Install
 
-| Source | Download Link |
-|--------|--------------|
-| **MicroG-RE (Morphe)** | 🔗 [Download](https://github.com/MorpheApp/MicroG-RE/releases/latest) |
-| **MicroG-RE (Better UI)** | 🔗 [Download](http://github.com/wstxda/microg-re/releases/latest) |
-| **GmsCore from ReVanced** | 🔗 [Download](http://github.com/revanced/gmscore/releases/latest) |
-| **GmsCore from YT-Advanced** | 🔗 [Download](http://github.com/yt-advanced/gmscore/releases/latest) |
+**Root:**
+1. Download module (versi Root)
+2. Install lewat Magisk / KSU / Apatch
+3. Export settings (opsional)
+4. Selesai
 
-> [!NOTE]
-> Recommended to use MicroG-RE (Morphe)!
+**Non-Root:**
+1. Install GmsCore (MicroG)
+2. Download & install YouTube ReVanced versi non-root
+3. Export settings (opsional)
+4. Selesai
 
-‎
+## Kredit
 
-## 🚀 Installation Guide  
-
-<h3>🎭 Root</h3>  
-
-1. **Download** the module (**Root Version**)  
-2. **Install** via **Magisk** / **KSU** / **Apatch**  
-3. **Export settings** (Optional)  
-4. Enjoy ✨  
-
----
-
-<h3>🌈 Non-Root</h3>  
-
-1. **Install GmsCore (MicroG)**  
-2. **Download & Install YouTube ReVanced (Non-Root Version)**  
-3. **Export settings** (Optional)  
-4. Enjoy ✨
-
-‎
-
-## 📜 Sources & References  
-- 🔧 [Revancify Tools](https://github.com/decipher3114/Revancify)
-- 🔧 [Revancify Xisr Tools](https://github.com/Xisrr1/Revancify-Xisr)
-- 📺 [YouTube ReVanced Patches](https://github.com/revanced)  
-- 🛠️ [Anddea Patch](https://github.com/anddea/revanced-patches)
+- [Revancify](https://github.com/decipher3114/Revancify) — decipher3114
+- [Revancify Xisr](https://github.com/Xisrr1/Revancify-Xisr) — Xisrr1
+- [YouTube ReVanced](https://github.com/revanced) — team ReVanced
+- [Anddea Patch](https://github.com/anddea/revanced-patches) — anddea
+- [Morphe CLI](https://github.com/MorpheApp/morphe-cli) — MorpheApp

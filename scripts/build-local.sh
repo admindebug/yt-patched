@@ -59,6 +59,7 @@ if [ -d /sdcard ] && [ -w /sdcard ]; then
     mkdir -p "$DEST_DIR"
     cp "$MODULE_ZIP" "$DEST_DIR/YTPatched_ROOT-$VERSION.zip"
     cp "$WORK_DIR/youtube-patched.apk" "$DEST_DIR/YTPatched_NON_ROOT-$VERSION.apk" 2>/dev/null || true
+    cp "$WORK_DIR/youtube-cloned.apk" "$DEST_DIR/YTPatched_CLONE-$VERSION.apk" 2>/dev/null || true
     cp "$WORK_DIR/microg.apk" "$DEST_DIR/MicroG.apk" 2>/dev/null || true
     log "File juga tersedia di: $DEST_DIR"
     DEST_NOTE="📂 <b>Lokasi file di device:</b> <code>$DEST_DIR</code>"

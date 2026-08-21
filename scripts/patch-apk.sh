@@ -56,3 +56,28 @@ java -Xmx3g -jar "$CLI_FILE" patch \
 
 [ -f "$OUTPUT_APK" ] || fail "Patching failed - no output APK produced."
 log "Patched APK: $OUTPUT_APK"
+
+# Varian clone (opsional, matikan dengan BUILD_CLONE=0):
+# pass kedua dengan patch "GmsCore support" supaya nama paket berubah dan
+# APK bisa dipasang berdampingan dengan YouTube asli (butuh MicroG).
+if [ "${BUILD_CLONE:-1}" = "1" ]; then
+    CLONE_APK="${CLONE_APK:-$WORK_DIR/youtube-cloned.apk}"
+    log "Membangun varian clone..."
+    java -Xmx3g -jar "$CLI_FILE" patch \
+        --continue-on-error --force --exclusive \
+        -p "$PATCHES_FILE" \
+        -o "$CLONE_APK" \
+        "${ARGS[@]}" \
+        -e "GmsCore support" \
+        --keystore="$KEYSTORE" \
+        --keystore-entry-alias="$KEYSTORE_ALIAS" \
+        --keystore-password="$KEYSTORE_PASS" \
+        --keystore-entry-password="$KEYSTORE_PASS" \
+        "$STOCK_APK" 2>&1 | tee "$WORK_DIR/patch-clone.log"
+
+    if [ -f "$CLONE_APK" ]; then
+        log "Clone APK: $CLONE_APK"
+    else
+        log "Varian clone gagal dibuat - dilewati, build lanjut."
+    fi
+fi

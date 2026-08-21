@@ -93,18 +93,15 @@ def md_to_telegram_html(md_text):
     return text
 
 
-def build_caption(version):
+def build_caption(version, files):
     lines = [f"<b>YouTube Patched FALABS v{version}</b>"]
     entry = changelog_first_entry()
     if entry:
         lines += ["", f"<blockquote>{md_to_telegram_html(entry)}</blockquote>"]
-    lines += [
-        "",
-        "<b>Download:</b>",
-        f"1. MicroG.apk - wajib untuk Non-Root",
-        f"2. YTPatched_NON_ROOT-{version}.apk - install langsung (Non-Root)",
-        f"3. YTPatched_ROOT-{version}.zip - module Root (Magisk/KSU/Apatch)",
-    ]
+    lines += ["", "<b>Download:</b>"]
+    for i, (_, name, desc) in enumerate(files, 1):
+        suffix = f" - {desc}" if desc else ""
+        lines.append(f"{i}. {name}{suffix}")
     return "\n".join(lines)
 
 
@@ -119,7 +116,8 @@ def read_module_zip():
 
 
 def resolve_files(version):
-    """Kembalikan daftar (path_asli, nama_file_di_telegram). Urutan sesuai spek."""
+    """Kembalikan daftar (path_asli, nama_file_di_telegram, deskripsi).
+    Urutan sesuai spek: MicroG, Non-Root, Clone, Root."""
     files = []
 
     microg = next((p for p in (
@@ -128,15 +126,23 @@ def resolve_files(version):
         os.path.join(WORK_DIR, "MicroG.apk"),
     ) if os.path.isfile(p)), None)
     if microg:
-        files.append((microg, "MicroG.apk"))
+        files.append((microg, "MicroG.apk", "wajib untuk Non-Root & Clone"))
     else:
         log("MicroG.apk tidak ditemukan - lewati (jalankan scripts/fetch-microg.sh).")
 
     patched = os.path.join(WORK_DIR, "youtube-patched.apk")
     if os.path.isfile(patched):
-        files.append((patched, f"YTPatched_NON_ROOT-{version}.apk"))
+        files.append((patched, f"YTPatched_NON_ROOT-{version}.apk",
+                      "install langsung (Non-Root)"))
     else:
         log(f"APK patched tidak ditemukan ({patched}) - lewati.")
+
+    cloned = os.path.join(WORK_DIR, "youtube-cloned.apk")
+    if os.path.isfile(cloned):
+        files.append((cloned, f"YTPatched_CLONE-{version}.apk",
+                      "bisa berdampingan dengan YouTube asli"))
+    else:
+        log(f"APK clone tidak ditemukan ({cloned}) - lewati (BUILD_CLONE=1?).")
 
     root_zip = None
     for cand in (read_module_zip(), os.path.join(OUT_DIR, f"YouTube.RVX.v{version}.zip"),
@@ -145,7 +151,8 @@ def resolve_files(version):
             root_zip = cand
             break
     if root_zip:
-        files.append((root_zip, f"YTPatched_ROOT-{version}.zip"))
+        files.append((root_zip, f"YTPatched_ROOT-{version}.zip",
+                      "module Root (Magisk/KSU/Apatch)"))
     else:
         die("Module zip tidak ditemukan. Build dulu via build-module.sh.")
 
@@ -201,7 +208,7 @@ async def _send_telethon(message, files, version):
                 )
 
             media = list(await asyncio.gather(
-                *[upload_one(src, name) for src, name in files]))
+                *[upload_one(src, name) for src, name, _ in files]))
             captions = [None] * len(media)
             captions[-1] = f"YouTube Patched FALABS v{version}"
             await client.send_file(entity, media, caption=captions, parse_mode="html")
@@ -214,7 +221,7 @@ async def _send_telethon(message, files, version):
 
 async def _send_telethon_plain(client, entity, files, version):
     """Fallback: upload standar Telethon satu per satu."""
-    for i, (src, name) in enumerate(files):
+    for i, (src, name, _) in enumerate(files):
         await client.send_file(entity, src, file_name=name,
                                caption=name if i == len(files) - 1
                                else f"YouTube Patched FALABS v{version}",
@@ -285,14 +292,14 @@ def main():
                     parse_mode="HTML", disable_web_page_preview="true")
         return
 
-    caption = build_caption(version)
     files = resolve_files(version)
+    caption = build_caption(version, files)
 
     if DRY_RUN:
         print("--- caption ---")
         print(caption)
         print("--- files ---")
-        for src, name in files:
+        for src, name, desc in files:
             print(f"{name}  <-  {src} ({os.path.getsize(src) // (1024 * 1024)} MB)")
         return
 
@@ -302,7 +309,7 @@ def main():
         log("Mode Bot API (tanpa STRING_SESSION) - file >50 MB tidak akan terkirim.")
         bot_api("sendMessage", chat_id=CHANNEL, text=caption,
                 parse_mode="HTML", disable_web_page_preview="true")
-        for i, (src, name) in enumerate(files, 1):
+        for i, (src, name, _) in enumerate(files, 1):
             bot_send_file(src, name, f"YouTube Patched FALABS v{version} ({i}/{len(files)})")
 
 

@@ -20,25 +20,7 @@
 
 `Note: Always Read README.MD first!`
 
-### Update
-- Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
-- YouTube 20.51.39 - all configured patches applied
-
-### Fix & Problem
-- If buffering occurs: Settings > ReVanced > Misc > Spoof client - switch client
-- For Non-Root, if "Package incompatible" appears, uninstall the old version first
-
-`Note: Always Read README.MD first!`
-
-### Update
-- Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
-- YouTube 20.51.39 - all configured patches applied
-
-### Fix & Problem
-- If buffering occurs: Settings > ReVanced > Misc > Spoof client - switch client
-- For Non-Root, if "Package incompatible" appears, uninstall the old version first
-
-`Note: Always Read README.MD first!`
+## v20.51.39 (2026-08-04)
 
 ### Update
 - Patched with Revancify Xisr Tool v1.4.5
@@ -52,4 +34,4 @@
 - FIX Problem for Buffering Issue: Change spoof client — Go to Settings > ReVanced > Misc > Spoof client, and try switching to a different client (e.g., Android VR, iOS, or Android TV). Some clients handle seeking/forwarding better than others.
 - For Non-Root, if during installation it displays "Package incompatible" or something similar, try uninstalling the old version first and reinstalling it cleanly.
 
-`Note: Always Read README.MD first!` 
+`Note: Always Read README.MD first!`

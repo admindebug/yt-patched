@@ -41,27 +41,32 @@ bash "$PROJECT_DIR/scripts/fetch-sources.sh" || cleanup_fail "fetch-sources"
 # 3. Stock APK
 bash "$PROJECT_DIR/scripts/download-apk.sh" || cleanup_fail "download-apk"
 
-# 4. Patch (langkah terberat: ~30-50 menit)
+# 4. MicroG (untuk dikirim ke Telegram)
+bash "$PROJECT_DIR/scripts/fetch-microg.sh" || cleanup_fail "fetch-microg"
+
+# 5. Patch (langkah terberat: ~30-50 menit)
 bash "$PROJECT_DIR/scripts/patch-apk.sh" || cleanup_fail "patch-apk"
 
-# 5. Build module zip
+# 6. Build module zip
 bash "$PROJECT_DIR/scripts/build-module.sh" || cleanup_fail "build-module"
 
 source "$WORK_DIR/.module"
 DURATION="$(( ($(date +%s) - BUILD_START) / 60 )) menit"
 
-# 6. Salin ke storage publik agar mudah diambil
+# 7. Salin ke storage publik agar mudah diambil
 DEST_DIR="/sdcard/Download/YouTube-RVX"
 if [ -d /sdcard ] && [ -w /sdcard ]; then
     mkdir -p "$DEST_DIR"
-    cp "$MODULE_ZIP" "$DEST_DIR/"
-    log "Module juga tersedia di: $DEST_DIR/$MODULE_NAME"
-    DEST_NOTE="📂 <b>Lokasi file di device:</b> <code>$DEST_DIR/$MODULE_NAME</code>"
+    cp "$MODULE_ZIP" "$DEST_DIR/YTPatched_ROOT-$VERSION.zip"
+    cp "$WORK_DIR/youtube-patched.apk" "$DEST_DIR/YTPatched_NON_ROOT-$VERSION.apk" 2>/dev/null || true
+    cp "$WORK_DIR/microg.apk" "$DEST_DIR/MicroG.apk" 2>/dev/null || true
+    log "File juga tersedia di: $DEST_DIR"
+    DEST_NOTE="📂 <b>Lokasi file di device:</b> <code>$DEST_DIR</code>"
 else
-    DEST_NOTE="📂 <b>Lokasi file:</b> <code>$MODULE_ZIP</code>"
+    DEST_NOTE="📂 <b>Lokasi file:</b> <code>$OUT_DIR</code>"
 fi
 
-# 7. Kirim ke Telegram (auto-split bila >50MB)
+# 8. Kirim ke Telegram (akun user via STRING_SESSION - sekali kirim tanpa split)
 bash "$PROJECT_DIR/scripts/telegram.sh" || { echo "Telegram gagal."; exit 1; }
 bash "$PROJECT_DIR/scripts/telegram.sh" "⏱️ Waktu build: <b>$DURATION</b>
 $DEST_NOTE

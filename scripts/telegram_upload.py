@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+"""Upload hasil build ke Telegram.
+
+Mode utama  : akun user via Telethon (TELEGRAM_STRING_SESSION).
+              Limit upload 2 GB per file, jadi module zip dikirim utuh tanpa split.
+              Format kirim:
+                1. Pesan changelog (dalam blockquote)
+                2. MicroG.apk
+                3. YTPatched_NON_ROOT-<versi>.apk
+                4. YTPatched_ROOT-<versi>.zip
+
+Mode fallback: Bot API (TELEGRAM_BOT_TOKEN), batas 50 MB per file.
+              File >50 MB tidak dikirim (tidak ada split lagi).
+
+Pesan teks saja: ./scripts/telegram.sh "pesan"
+Dry run        : DRY_RUN=1 ./scripts/telegram.sh
+"""
+import html
+import json
+import os
+import re
+import subprocess
+import sys
+import urllib.parse
+import urllib.request
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONFIG_FILE = os.environ.get("CONFIG_FILE") or os.path.join(PROJECT_DIR, "config", "patches.json")
+WORK_DIR = os.environ.get("WORK_DIR") or os.path.join(PROJECT_DIR, "work")
+OUT_DIR = os.environ.get("OUT_DIR") or os.path.join(PROJECT_DIR, "out")
+
+SESSION = os.environ.get("TELEGRAM_STRING_SESSION") or os.environ.get("STRING_SESSION") or ""
+API_ID = os.environ.get("TELEGRAM_API_ID") or os.environ.get("API_ID") or ""
+API_HASH = os.environ.get("TELEGRAM_API_HASH") or os.environ.get("API_HASH") or ""
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or ""
+CHANNEL = (os.environ.get("TELEGRAM_CHANNEL_ID") or "").strip()
+DRY_RUN = os.environ.get("DRY_RUN", "") == "1"
+
+BOT_MAX = 50 * 1024 * 1024  # 50 MB limit Bot API
+
+
+def log(msg):
+    print(f"[telegram] {msg}", file=sys.stderr)
+
+
+def die(msg):
+    print(f"[ERROR] {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def load_version():
+    try:
+        with open(CONFIG_FILE) as fh:
+            return json.load(fh)["youtube_version"]
+    except (OSError, KeyError, json.JSONDecodeError) as err:
+        die(f"Cannot read youtube_version from {CONFIG_FILE}: {err}")
+
+
+def changelog_first_entry():
+    """Ambil entry paling atas dari changelog.md sebagai teks blockquote."""
+    path = os.path.join(PROJECT_DIR, "changelog.md")
+    try:
+        with open(path) as fh:
+            txt = fh.read()
+    except OSError:
+        return ""
+    entry = re.split(r"\n(?=## )", txt)[0].strip()
+    return html.escape(entry)
+
+
+def build_caption(version):
+    lines = [f"📺 <b>YouTube ReVanced Extended v{version}</b>"]
+    entry = changelog_first_entry()
+    if entry:
+        lines += ["", f"<blockquote>{entry}</blockquote>"]
+    lines += [
+        "",
+        "📥 <b>Download:</b>",
+        f"1️⃣ MicroG.apk — wajib untuk Non-Root",
+        f"2️⃣ YTPatched_NON_ROOT-{version}.apk — install langsung (Non-Root)",
+        f"3️⃣ YTPatched_ROOT-{version}.zip — module Root (Magisk/KSU/Apatch)",
+    ]
+    return "\n".join(lines)
+
+
+def read_module_zip():
+    path = os.path.join(WORK_DIR, ".module")
+    if os.path.isfile(path):
+        with open(path) as fh:
+            for line in fh:
+                if line.startswith("MODULE_ZIP="):
+                    return line.split("=", 1)[1].strip()
+    return None
+
+
+def resolve_files(version):
+    """Kembalikan daftar (path_asli, nama_file_di_telegram). Urutan sesuai spek."""
+    files = []
+
+    microg = next((p for p in (
+        os.path.join(OUT_DIR, "MicroG.apk"),
+        os.path.join(WORK_DIR, "microg.apk"),
+        os.path.join(WORK_DIR, "MicroG.apk"),
+    ) if os.path.isfile(p)), None)
+    if microg:
+        files.append((microg, "MicroG.apk"))
+    else:
+        log("MicroG.apk tidak ditemukan - lewati (jalankan scripts/fetch-microg.sh).")
+
+    patched = os.path.join(WORK_DIR, "youtube-patched.apk")
+    if os.path.isfile(patched):
+        files.append((patched, f"YTPatched_NON_ROOT-{version}.apk"))
+    else:
+        log(f"APK patched tidak ditemukan ({patched}) - lewati.")
+
+    root_zip = None
+    for cand in (read_module_zip(), os.path.join(OUT_DIR, f"YouTube.RVX.v{version}.zip"),
+                 os.path.join(OUT_DIR, f"YTPatched_ROOT-{version}.zip")):
+        if cand and os.path.isfile(cand):
+            root_zip = cand
+            break
+    if root_zip:
+        files.append((root_zip, f"YTPatched_ROOT-{version}.zip"))
+    else:
+        die("Module zip tidak ditemukan. Build dulu via build-module.sh.")
+
+    return files
+
+
+def entity_id():
+    if not CHANNEL:
+        die("TELEGRAM_CHANNEL_ID tidak diset.")
+    return int(CHANNEL) if re.fullmatch(r"-?\d+", CHANNEL) else CHANNEL
+
+
+def send_telethon(message, files):
+    from telethon import TelegramClient
+    from telethon.sessions import StringSession
+
+    with TelegramClient(StringSession(SESSION), int(API_ID), API_HASH) as client:
+        entity = entity_id()
+        client.send_message(entity, message, parse_mode="html", link_preview=False)
+        log("Pesan changelog terkirim.")
+
+        if not files:
+            return
+
+        # Kirim sebagai album dengan nama file final via symlink sementara.
+        link_dir = os.path.join(WORK_DIR, "tg-upload")
+        os.makedirs(link_dir, exist_ok=True)
+        linked = []
+        try:
+            for src, name in files:
+                dst = os.path.join(link_dir, name)
+                if os.path.lexists(dst):
+                    os.remove(dst)
+                os.symlink(os.path.abspath(src), dst)
+                linked.append(dst)
+            album_caption = f"📦 YouTube RVX v{version}"
+            captions = [None] * len(linked)
+            captions[-1] = album_caption
+            client.send_file(entity, linked, caption=captions, force_document=True)
+            log(f"{len(linked)} file terkirim (sekali kirim, tanpa split).")
+        finally:
+            for dst in linked:
+                if os.path.lexists(dst):
+                    os.remove(dst)
+
+
+def bot_api(method, **data):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/{method}"
+    payload = urllib.parse.urlencode(data).encode()
+    req = urllib.request.Request(url, data=payload)
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            body = json.loads(resp.read().decode())
+            if not body.get("ok"):
+                raise RuntimeError(body.get("description", "unknown error"))
+    except Exception as err:
+        die(f"Bot API {method} gagal: {err}")
+
+
+def bot_send_file(path, name, caption):
+    size = os.path.getsize(path)
+    if size > BOT_MAX:
+        die(f"{name} ({size // (1024 * 1024)} MB) melebihi batas 50 MB Bot API. "
+            "Set TELEGRAM_STRING_SESSION untuk upload sekali kirim.")
+    result = subprocess.run(
+        ["curl", "-fsSL",
+         "-F", f"chat_id={CHANNEL}",
+         "-F", f"document=@{path};filename={name}",
+         "--form-string", f"caption={caption}",
+         "--form-string", "parse_mode=HTML",
+         f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"],
+        capture_output=True, text=True)
+    if result.returncode != 0:
+        die(f"Gagal upload {name} via Bot API: {result.stderr.strip()}")
+    log(f"{name} terkirim via Bot API.")
+
+
+def main():
+    message_only = sys.argv[1] if len(sys.argv) > 1 else ""
+
+    if not SESSION and not BOT_TOKEN:
+        log("TELEGRAM_STRING_SESSION / TELEGRAM_BOT_TOKEN tidak diset - skipping Telegram.")
+        return
+    if SESSION and (not API_ID or not API_HASH):
+        die("TELEGRAM_STRING_SESSION diset tapi TELEGRAM_API_ID / TELEGRAM_API_HASH kosong.")
+
+    version = load_version()
+
+    if message_only:
+        if SESSION:
+            from telethon import TelegramClient
+            from telethon.sessions import StringSession
+            with TelegramClient(StringSession(SESSION), int(API_ID), API_HASH) as client:
+                client.send_message(entity_id(), message_only, parse_mode="html", link_preview=False)
+            log("Pesan terkirim.")
+        else:
+            bot_api("sendMessage", chat_id=CHANNEL, text=message_only,
+                    parse_mode="HTML", disable_web_page_preview="true")
+        return
+
+    caption = build_caption(version)
+    files = resolve_files(version)
+
+    if DRY_RUN:
+        print("--- caption ---")
+        print(caption)
+        print("--- files ---")
+        for src, name in files:
+            print(f"{name}  <-  {src} ({os.path.getsize(src) // (1024 * 1024)} MB)")
+        return
+
+    if SESSION:
+        send_telethon(caption, files)
+    else:
+        log("Mode Bot API (tanpa STRING_SESSION) - file >50 MB tidak akan terkirim.")
+        bot_api("sendMessage", chat_id=CHANNEL, text=caption,
+                parse_mode="HTML", disable_web_page_preview="true")
+        for i, (src, name) in enumerate(files, 1):
+            bot_send_file(src, name, f"📦 YouTube RVX v{version} — {i}/{len(files)}")
+
+
+if __name__ == "__main__":
+    main()

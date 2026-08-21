@@ -6,7 +6,7 @@ require zip
 VERSION="$(read_json "['youtube_version']")"
 STOCK_APK="${STOCK_APK:-$WORK_DIR/youtube-stock.apk}"
 PATCHED_APK="${PATCHED_APK:-$WORK_DIR/youtube-patched.apk}"
-MODULE_NAME="YouTube.RVX.v$VERSION.zip"
+MODULE_NAME="YTPatched_ROOT-$VERSION.zip"
 MODULE_ZIP="$OUT_DIR/$MODULE_NAME"
 
 [ -f "$STOCK_APK" ]   || fail "Stock APK missing: $STOCK_APK"
@@ -43,7 +43,7 @@ repo, version, code, name = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 print(json.dumps({
     "version": f"v{version}",
     "versionCode": code,
-    "zipUrl": f"https://github.com/{repo}/releases/download/v{version}/YouTube.RVX.v{version}.zip",
+    "zipUrl": f"https://github.com/{repo}/releases/download/v{version}/YTPatched_ROOT-{version}.zip",
     "changelog": f"https://raw.githubusercontent.com/{repo}/main/changelog.md",
     "releaseType": "stable"
 }, indent=2))

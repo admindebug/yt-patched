@@ -12,28 +12,38 @@ Build dijalankan oleh GitHub Actions (jadwal harian atau manual), alurnya kira-k
 fetch-sources.sh  → ambil Morphe CLI + patches Anddea (.mpp) terbaru
 detect-version.sh → cari versi YouTube terbaru yang didukung patch
 download-apk.sh   → download APK stock dari APKMirror
+fetch-microg.sh   → download MicroG-RE terbaru (untuk paket Telegram)
 patch-apk.sh      → patch APK sesuai config/patches.json
 build-module.sh   → rakit jadi zip module Magisk
 update-json.sh    → update update.json + changelog.md
 GitHub Release    → publish zip ke halaman release
-telegram.sh       → kirim link + ringkasan ke channel
+telegram.sh       → upload ke channel via Telethon (changelog + MicroG.apk +
+                    YTPatched_NON_ROOT-<versi>.apk + YTPatched_ROOT-<versi>.zip)
 ```
 
 > [!NOTE]
-> Ukuran module zip ±300 MB, sedangkan batas upload bot Telegram cuma 50 MB. Jadi yang dikirim ke Telegram adalah **link release** + ringkasan patch. Kalau ukuran module di bawah 50 MB (jarang terjadi), filenya dikirim langsung.
+> Upload ke Telegram pakai **akun user via Telethon** (`STRING_SESSION`), bukan bot. Limit upload akun user 2 GB (4 GB Premium), jadi semua file dikirim **sekali kirim tanpa split**: changelog dalam blockquote + `MicroG.apk` + APK Non-Root + zip module Root.
 
 ## Setup Pertama Kali
 
 1. Push project ini ke repo GitHub kamu.
-2. Tambah secrets di `Settings → Secrets and variables → Actions`:
+2. Buat `STRING_SESSION` Telethon dari akun Telegram kamu:
+   ```bash
+   pip install telethon
+   python3 scripts/generate-session.py
+   ```
+   API_ID & API_HASH didapat dari https://my.telegram.org (API development tools).
+3. Tambah secrets di `Settings → Secrets and variables → Actions`:
    | Secret | Isi |
    |--------|-----|
-   | `TELEGRAM_BOT_TOKEN` | Token bot dari @BotFather |
+   | `TELEGRAM_API_ID` | API ID dari my.telegram.org |
+   | `TELEGRAM_API_HASH` | API Hash dari my.telegram.org |
+   | `TELEGRAM_STRING_SESSION` | Hasil generate-session.py |
    | `TELEGRAM_CHANNEL_ID` | ID channel, format `-100xxxxxxxxxx` |
-3. Jalankan workflow `Build & Release Module` dari tab **Actions**, atau tunggu jadwal hariannya.
+4. Jalankan workflow `Build & Release Module` dari tab **Actions**, atau tunggu jadwal hariannya.
 
 > [!CAUTION]
-> **Jangan pernah simpan BOT_TOKEN di file atau kode.** Token cuma boleh ada di GitHub Secrets. Kalau token sudah terlanjur bocor, langsung buat ulang via @BotFather.
+> **Jangan pernah simpan STRING_SESSION / API_HASH di file atau kode.** String session = akses penuh akun Telegram kamu. Cuma boleh ada di GitHub Secrets atau `config/.env.local` (gitignored). Kalau terlanjur bocor, revoke session di Settings → Devices Telegram.
 
 ## Atur Patch
 
@@ -72,13 +82,13 @@ Kalau mau jalan pelan-pelan:
 ./scripts/fetch-sources.sh
 ./scripts/download-apk.sh
 ./scripts/patch-apk.sh                  # ini yang paling lama, ±30-50 menit
-./scripts/build-module.sh               # hasil: out/YouTube.RVX.v<versi>.zip
+./scripts/build-module.sh               # hasil: out/YTPatched_ROOT-<versi>.zip
 ./scripts/telegram.sh
 ```
 
 > [!NOTE]
 > - Butuh **Java 21 + ±3 GB RAM + ±40 menit**. Kalau build di HP: tutup aplikasi lain, colok charger, dan matikan battery optimization untuk Termux.
-> - Module zip ±290 MB di-split jadi beberapa part saat dikirim via bot. File utuh juga ada di `/sdcard/Download/YouTube-RVX/`.
+> - File utuh (module zip, APK Non-Root, MicroG) juga disalin ke `/sdcard/Download/YouTube-RVX/`.
 
 ## Disclaimer
 

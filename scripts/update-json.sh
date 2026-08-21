@@ -26,7 +26,8 @@ cat > "$TMPLOG" <<EOF
 
 \`Note: Always Read README.MD first!\`
 EOF
-[ -f "$CHANGELOG" ] && tail -n +2 "$CHANGELOG" >> "$TMPLOG"
+# Keep historical entries: skip the newest heading+body, print from 2nd entry on.
+[ -f "$CHANGELOG" ] && awk '/^## /{n++} n>=2{print}' "$CHANGELOG" >> "$TMPLOG"
 cp "$TMPLOG" "$CHANGELOG"
 
 # update.json at repo root (raw URL, used by Magisk update channel)
@@ -36,7 +37,7 @@ repo, version, code = sys.argv[1], sys.argv[2], sys.argv[3]
 print(json.dumps({
     "version": f"v{version}",
     "versionCode": int(code),
-    "zipUrl": f"https://github.com/{repo}/releases/download/v{version}/YouTube.RVX.v{version}.zip",
+    "zipUrl": f"https://github.com/{repo}/releases/download/v{version}/YTPatched_ROOT-{version}.zip",
     "changelog": f"https://raw.githubusercontent.com/{repo}/main/changelog.md",
     "releaseType": "stable"
 }, indent=2))

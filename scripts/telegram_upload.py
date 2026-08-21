@@ -15,6 +15,7 @@ Mode fallback: Bot API (TELEGRAM_BOT_TOKEN), batas 50 MB per file.
 Pesan teks saja: ./scripts/telegram.sh "pesan"
 Dry run        : DRY_RUN=1 ./scripts/telegram.sh
 """
+import asyncio
 import html
 import json
 import os
@@ -133,13 +134,13 @@ def entity_id():
     return int(CHANNEL) if re.fullmatch(r"-?\d+", CHANNEL) else CHANNEL
 
 
-def send_telethon(message, files):
+async def _send_telethon(message, files, version):
     from telethon import TelegramClient
     from telethon.sessions import StringSession
 
-    with TelegramClient(StringSession(SESSION), int(API_ID), API_HASH) as client:
+    async with TelegramClient(StringSession(SESSION), int(API_ID), API_HASH) as client:
         entity = entity_id()
-        client.send_message(entity, message, parse_mode="html", link_preview=False)
+        await client.send_message(entity, message, parse_mode="html", link_preview=False)
         log("Pesan changelog terkirim.")
 
         if not files:
@@ -159,12 +160,16 @@ def send_telethon(message, files):
             album_caption = f"📦 YouTube RVX v{version}"
             captions = [None] * len(linked)
             captions[-1] = album_caption
-            client.send_file(entity, linked, caption=captions, force_document=True)
+            await client.send_file(entity, linked, caption=captions, force_document=True)
             log(f"{len(linked)} file terkirim (sekali kirim, tanpa split).")
         finally:
             for dst in linked:
                 if os.path.lexists(dst):
                     os.remove(dst)
+
+
+def send_telethon(message, files, version):
+    asyncio.run(_send_telethon(message, files, version))
 
 
 def bot_api(method, **data):
@@ -198,6 +203,14 @@ def bot_send_file(path, name, caption):
     log(f"{name} terkirim via Bot API.")
 
 
+async def _send_text(text):
+    from telethon import TelegramClient
+    from telethon.sessions import StringSession
+
+    async with TelegramClient(StringSession(SESSION), int(API_ID), API_HASH) as client:
+        await client.send_message(entity_id(), text, parse_mode="html", link_preview=False)
+
+
 def main():
     message_only = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -211,10 +224,7 @@ def main():
 
     if message_only:
         if SESSION:
-            from telethon import TelegramClient
-            from telethon.sessions import StringSession
-            with TelegramClient(StringSession(SESSION), int(API_ID), API_HASH) as client:
-                client.send_message(entity_id(), message_only, parse_mode="html", link_preview=False)
+            asyncio.run(_send_text(message_only))
             log("Pesan terkirim.")
         else:
             bot_api("sendMessage", chat_id=CHANNEL, text=message_only,
@@ -233,7 +243,7 @@ def main():
         return
 
     if SESSION:
-        send_telethon(caption, files)
+        send_telethon(caption, files, version)
     else:
         log("Mode Bot API (tanpa STRING_SESSION) - file >50 MB tidak akan terkirim.")
         bot_api("sendMessage", chat_id=CHANNEL, text=caption,

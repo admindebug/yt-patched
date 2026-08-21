@@ -1,4 +1,4 @@
-## v20.51.39 (2026-08-19)
+## v20.51.39 (2026-08-21)
 
 ### Update
 - Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
@@ -9,17 +9,6 @@
 - For Non-Root, if "Package incompatible" appears, uninstall the old version first
 
 `Note: Always Read README.MD first!`
-
-### Update
-- Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
-- YouTube 20.51.39 - all configured patches applied
-
-### Fix & Problem
-- If buffering occurs: Settings > ReVanced > Misc > Spoof client - switch client
-- For Non-Root, if "Package incompatible" appears, uninstall the old version first
-
-`Note: Always Read README.MD first!`
-
 ## v20.51.39 (2026-08-04)
 
 ### Update

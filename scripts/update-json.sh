@@ -17,7 +17,6 @@ cat > "$TMPLOG" <<EOF
 ## $TAG ($DATE)
 
 ### Update
-- Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
 - YouTube $VERSION - all configured patches applied
 
 ### Fix & Problem

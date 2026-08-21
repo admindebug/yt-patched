@@ -8,7 +8,6 @@ Mode utama  : akun user via Telethon (TELEGRAM_STRING_SESSION).
                 2. MicroG.apk
                 3. YTPatched_NON_ROOT-<versi>.apk
                 4. YTPatched_ROOT-<versi>.zip
-
 Mode fallback: Bot API (TELEGRAM_BOT_TOKEN), batas 50 MB per file.
               File >50 MB tidak dikirim (tidak ada split lagi).
 
@@ -70,16 +69,16 @@ def changelog_first_entry():
 
 
 def build_caption(version):
-    lines = [f"📺 <b>YouTube ReVanced Extended v{version}</b>"]
+    lines = [f"<b>YouTube Patched FALABS v{version}</b>"]
     entry = changelog_first_entry()
     if entry:
         lines += ["", f"<blockquote>{entry}</blockquote>"]
     lines += [
         "",
-        "📥 <b>Download:</b>",
-        f"1️⃣ MicroG.apk — wajib untuk Non-Root",
-        f"2️⃣ YTPatched_NON_ROOT-{version}.apk — install langsung (Non-Root)",
-        f"3️⃣ YTPatched_ROOT-{version}.zip — module Root (Magisk/KSU/Apatch)",
+        "<b>Download:</b>",
+        f"1. MicroG.apk - wajib untuk Non-Root",
+        f"2. YTPatched_NON_ROOT-{version}.apk - install langsung (Non-Root)",
+        f"3. YTPatched_ROOT-{version}.zip - module Root (Magisk/KSU/Apatch)",
     ]
     return "\n".join(lines)
 
@@ -157,7 +156,7 @@ async def _send_telethon(message, files, version):
                     os.remove(dst)
                 os.symlink(os.path.abspath(src), dst)
                 linked.append(dst)
-            album_caption = f"📦 YouTube RVX v{version}"
+            album_caption = f"YouTube Patched FALABS v{version}"
             captions = [None] * len(linked)
             captions[-1] = album_caption
             await client.send_file(entity, linked, caption=captions, force_document=True)
@@ -249,7 +248,7 @@ def main():
         bot_api("sendMessage", chat_id=CHANNEL, text=caption,
                 parse_mode="HTML", disable_web_page_preview="true")
         for i, (src, name) in enumerate(files, 1):
-            bot_send_file(src, name, f"📦 YouTube RVX v{version} — {i}/{len(files)}")
+            bot_send_file(src, name, f"YouTube Patched FALABS v{version} ({i}/{len(files)})")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 ## v20.51.39 (2026-08-21)
 
 ### Update
-- Auto-built with GitHub Actions (Morphe CLI + Anddea patches)
 - YouTube 20.51.39 - all configured patches applied
 
 ### Fix & Problem

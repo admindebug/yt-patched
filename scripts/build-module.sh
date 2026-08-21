@@ -28,7 +28,7 @@ cp -r "$MODULE_DIR/META-INF"  "$STAGE/"
 # module.prop
 cat > "$STAGE/module.prop" <<EOF
 id=YouTube-RVX
-name=YouTube ReVanced Extended
+name=YouTube Patched FALABS
 version=v$VERSION
 versionCode=$BUILD_CODE
 author=$(jq -r '.author // "build"' "$CONFIG_FILE" 2>/dev/null || echo "build")

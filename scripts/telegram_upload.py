@@ -3,6 +3,8 @@
 
 Mode utama  : akun user via Telethon (TELEGRAM_STRING_SESSION).
               Limit upload 2 GB per file, jadi module zip dikirim utuh tanpa split.
+              Upload pakai FastTelethon (banyak koneksi paralel) agar cepat,
+              dengan fallback ke upload standar kalau gagal.
               Format kirim:
                 1. Pesan changelog (dalam blockquote)
                 2. MicroG.apk
@@ -133,9 +135,22 @@ def entity_id():
     return int(CHANNEL) if re.fullmatch(r"-?\d+", CHANNEL) else CHANNEL
 
 
+async def _fast_upload(client, path):
+    """Upload file ke server Telegram pakai banyak koneksi paralel (FastTelethon)."""
+    from fast_telethon import upload_file
+    with open(path, "rb") as fh:
+        return await upload_file(client, fh)
+
+
 async def _send_telethon(message, files, version):
     from telethon import TelegramClient
     from telethon.sessions import StringSession
+    from telethon.tl.types import DocumentAttributeFilename, InputMediaUploadedDocument
+
+    MIME = {
+        ".apk": "application/vnd.android.package-archive",
+        ".zip": "application/zip",
+    }
 
     async with TelegramClient(StringSession(SESSION), int(API_ID), API_HASH) as client:
         entity = entity_id()
@@ -145,26 +160,43 @@ async def _send_telethon(message, files, version):
         if not files:
             return
 
-        # Kirim sebagai album dengan nama file final via symlink sementara.
-        link_dir = os.path.join(WORK_DIR, "tg-upload")
-        os.makedirs(link_dir, exist_ok=True)
-        linked = []
+        # Upload handle semua file secara paralel (masing-masing multi-koneksi).
+        import time
+        t0 = time.monotonic()
+
         try:
-            for src, name in files:
-                dst = os.path.join(link_dir, name)
-                if os.path.lexists(dst):
-                    os.remove(dst)
-                os.symlink(os.path.abspath(src), dst)
-                linked.append(dst)
-            album_caption = f"YouTube Patched FALABS v{version}"
-            captions = [None] * len(linked)
-            captions[-1] = album_caption
-            await client.send_file(entity, linked, caption=captions, force_document=True)
-            log(f"{len(linked)} file terkirim (sekali kirim, tanpa split).")
-        finally:
-            for dst in linked:
-                if os.path.lexists(dst):
-                    os.remove(dst)
+            async def upload_one(src, name):
+                log(f"Mengupload {name} ({os.path.getsize(src) // (1024 * 1024)} MB)...")
+                handle = await _fast_upload(client, src)
+                log(f"Upload {name} selesai.")
+                ext = os.path.splitext(name)[1]
+                return InputMediaUploadedDocument(
+                    file=handle,
+                    mime_type=MIME.get(ext, "application/octet-stream"),
+                    attributes=[DocumentAttributeFilename(file_name=name)],
+                    force_file=True,
+                )
+
+            media = list(await asyncio.gather(
+                *[upload_one(src, name) for src, name in files]))
+            captions = [None] * len(media)
+            captions[-1] = f"YouTube Patched FALABS v{version}"
+            await client.send_file(entity, media, caption=captions, parse_mode="html")
+            log(f"{len(media)} file terkirim dalam {time.monotonic() - t0:.0f} detik "
+                "(sekali kirim, tanpa split).")
+        except Exception as err:
+            log(f"Fast upload gagal ({err!r}) - fallback ke upload standar.")
+            await _send_telethon_plain(client, entity, files, version)
+
+
+async def _send_telethon_plain(client, entity, files, version):
+    """Fallback: upload standar Telethon satu per satu."""
+    for i, (src, name) in enumerate(files):
+        await client.send_file(entity, src, file_name=name,
+                               caption=name if i == len(files) - 1
+                               else f"YouTube Patched FALABS v{version}",
+                               force_document=True)
+        log(f"{name} terkirim (mode lambat).")
 
 
 def send_telethon(message, files, version):

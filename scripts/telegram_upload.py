@@ -67,14 +67,37 @@ def changelog_first_entry():
     except OSError:
         return ""
     entry = re.split(r"\n(?=## )", txt)[0].strip()
-    return html.escape(entry)
+    return entry
+
+
+def md_to_telegram_html(md_text):
+    """Konversi markdown changelog sederhana ke HTML yang bisa dirender Telegram."""
+    text = html.escape(md_text)
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("### "):
+            lines.append(f"<b><u>{stripped[4:]}</u></b>")
+        elif stripped.startswith("## "):
+            lines.append(f"<b>{stripped[3:]}</b>")
+        elif stripped.startswith("# "):
+            lines.append(f"<b>{stripped[2:]}</b>")
+        elif stripped.startswith("- "):
+            lines.append(f"\u2022 {stripped[2:]}")
+        else:
+            lines.append(line)
+    text = "\n".join(lines)
+    # Inline code `x` -> <code>x</code>, link [t](u) -> <a href="u">t</a>
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
+    return text
 
 
 def build_caption(version):
     lines = [f"<b>YouTube Patched FALABS v{version}</b>"]
     entry = changelog_first_entry()
     if entry:
-        lines += ["", f"<blockquote>{entry}</blockquote>"]
+        lines += ["", f"<blockquote>{md_to_telegram_html(entry)}</blockquote>"]
     lines += [
         "",
         "<b>Download:</b>",

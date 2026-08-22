@@ -89,6 +89,19 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Detect new YouTube version
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Badge [VERSI BARU] di Telegram hanya jika release utk versi ini belum ada.
+          if gh release view "${{ env.TAG }}" >/dev/null 2>&1; then
+            echo "NEW_VERSION=false" >> "$GITHUB_ENV"
+          else
+            echo "NEW_VERSION=true" >> "$GITHUB_ENV"
+            echo "Versi baru terdeteksi: ${{ env.TAG }}"
+          fi
+
       - name: Download stock YouTube APK
         if: steps.check.outputs.skip != 'true'
         run: bash scripts/download-apk.sh

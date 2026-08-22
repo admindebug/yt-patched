@@ -13,16 +13,20 @@ fetch-sources.sh  → ambil Morphe CLI + patches Anddea (.mpp) terbaru
 detect-version.sh → cari versi YouTube terbaru yang didukung patch
 download-apk.sh   → download APK stock dari APKMirror
 fetch-microg.sh   → download MicroG-RE terbaru (untuk paket Telegram)
-patch-apk.sh      → patch APK sesuai config/patches.json
+patch-apk.sh      → patch APK sesuai config/patches.json (+ varian clone)
+verify-apk.sh     → verifikasi tanda tangan APK + integritas zip
 build-module.sh   → rakit jadi zip module Magisk
 update-json.sh    → update update.json + changelog.md
-GitHub Release    → publish zip ke halaman release
-telegram.sh       → upload ke channel via Telethon (changelog + MicroG.apk +
-                    YTPatched_NON_ROOT-<versi>.apk + YTPatched_ROOT-<versi>.zip)
+GitHub Release    → publish semua varian (MicroG, Non-Root, Clone, Root)
+telegram.sh       → upload ke channel via Telethon (changelog + 4 file,
+                    paralel multi-koneksi via FastTelethon)
 ```
 
 > [!NOTE]
-> Upload ke Telegram pakai **akun user via Telethon** (`STRING_SESSION`), bukan bot. Limit upload akun user 2 GB (4 GB Premium), jadi semua file dikirim **sekali kirim tanpa split**: changelog dalam blockquote + `MicroG.apk` + APK Non-Root + zip module Root.
+> Upload ke Telegram pakai **akun user via Telethon** (`STRING_SESSION`), bukan bot. Limit upload akun user 2 GB (4 GB Premium), jadi semua file dikirim **sekali kirim tanpa split**: changelog dalam blockquote + `MicroG.apk` + `YTPatched_NON_ROOT-<versi>.apk` + `YTPatched_CLONE-<versi>.apk` + `YTPatched_ROOT-<versi>.zip`.
+
+> [!IMPORTANT]
+> **Keystore signing disimpan di secret `KEYSTORE_BASE64`** (base64 dari `keystore/morphe.keystore`) supaya signature APK konsisten antar build. Tanpa ini CI membuat keystore acak tiap hari dan pengguna tidak bisa update tanpa uninstall (error "Package incompatible").
 
 ## Setup Pertama Kali
 
@@ -40,6 +44,7 @@ telegram.sh       → upload ke channel via Telethon (changelog + MicroG.apk +
    | `TELEGRAM_API_HASH` | API Hash dari my.telegram.org |
    | `TELEGRAM_STRING_SESSION` | Hasil generate-session.py |
    | `TELEGRAM_CHANNEL_ID` | ID channel, format `-100xxxxxxxxxx` |
+   | `KEYSTORE_BASE64` | `base64 -w0 keystore/morphe.keystore \| gh secret set KEYSTORE_BASE64 -R <user>/<repo>` |
 4. Jalankan workflow `Build & Release Module` dari tab **Actions**, atau tunggu jadwal hariannya.
 
 > [!CAUTION]

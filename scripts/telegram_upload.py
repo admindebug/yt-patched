@@ -94,7 +94,10 @@ def md_to_telegram_html(md_text):
 
 
 def build_caption(version, files):
-    lines = [f"<b>YouTube Patched FALABS v{version}</b>"]
+    title = f"<b>YouTube Patched FALABS v{version}</b>"
+    if (os.environ.get("NEW_VERSION") or "").lower() == "true":
+        title += "  <b>[VERSI BARU]</b>"
+    lines = [title]
     entry = changelog_first_entry()
     if entry:
         lines += ["", f"<blockquote>{md_to_telegram_html(entry)}</blockquote>"]
@@ -102,6 +105,11 @@ def build_caption(version, files):
     for i, (_, name, desc) in enumerate(files, 1):
         suffix = f" - {desc}" if desc else ""
         lines.append(f"{i}. {name}{suffix}")
+    repo = os.environ.get("GITHUB_REPOSITORY", "admindebug/yt-patched")
+    lines += [
+        "",
+        f'🔗 <a href="https://github.com/{repo}/releases/tag/v{version}">GitHub Release</a>',
+    ]
     return "\n".join(lines)
 
 
